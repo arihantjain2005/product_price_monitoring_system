@@ -1,6 +1,6 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, Query, status
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.orm import Session, joinedload
 from src.database import get_db
 from src.models.product import CanonicalProduct, SourceListing, PriceHistory
 from src.schemas.product import ProductResponse
@@ -34,9 +34,6 @@ def get_products(
     products = query.group_by(CanonicalProduct.id).offset(skip).limit(limit).all()
 
     return APIResponse(success=True, data=products)
-
-from fastapi import HTTPException
-from sqlalchemy.orm import joinedload
 
 @router.get("/{product_id}", response_model=APIResponse[ProductResponse])
 def get_product(

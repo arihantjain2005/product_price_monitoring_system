@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from contextlib import asynccontextmanager
 import asyncio
@@ -26,6 +27,15 @@ app = FastAPI(
     title="Product Price Monitoring API",
     description="Real-time tracking of marketplace product pricing and availability.",
     lifespan=lifespan
+)
+
+# Securely allow local file/UI testing 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], # For purely local dev evaluation purposes
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.include_router(webhooks_router)

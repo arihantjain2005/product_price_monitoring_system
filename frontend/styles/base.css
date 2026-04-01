@@ -1,0 +1,65 @@
+/* ===================================
+   BASE: Design Tokens & Global Reset
+   Responsibility: CSS variables, root styles, typography, resets
+======================================= */
+
+:root {
+    /* Color Palette */
+    --bg-dark:           #0f172a;
+    --bg-surface:        #1e293b;
+    --bg-surface-hover:  #293548;
+    --bg-elevated:       #263144;
+    --border-subtle:     rgba(255, 255, 255, 0.06);
+    --border-glow:       rgba(59, 130, 246, 0.35);
+
+    /* Text */
+    --text-primary:      #f1f5f9;
+    --text-secondary:    #94a3b8;
+    --text-muted:        #64748b;
+
+    /* Brand */
+    --brand:             #3b82f6;
+    --brand-dark:        #2563eb;
+    --brand-glow:        rgba(59, 130, 246, 0.3);
+
+    /* Semantic */
+    --success:           #10b981;
+    --success-glow:      rgba(16, 185, 129, 0.25);
+    --danger:            #ef4444;
+    --warning:           #f59e0b;
+
+    /* Layout */
+    --sidebar-width:     260px;
+    --topbar-height:     80px;
+
+    /* Typography */
+    --font:              'Inter', -apple-system, sans-serif;
+
+    /* Motion */
+    --ease:              0.2s ease;
+    --ease-out:          0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+*, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html { font-size: 16px; }
+
+body {
+    background-color: var(--bg-dark);
+    color: var(--text-primary);
+    font-family: var(--font);
+    height: 100vh;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+}
+
+a { text-decoration: none; color: inherit; }
+
+#app {
+    display: flex;
+    height: 100vh;
+}

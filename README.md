@@ -87,6 +87,32 @@ Queries your Canonical Products and localized listings.
 - `skip` (int, default=0)
 - `limit` (int, default=20)
 
+### 4. Detail & History Endpoints
+`GET /products/{product_id}`
+Retrieves a deeply eager-loaded payload containing the canonical product, its source listings, and nested price history.
+
+`GET /products/{product_id}/history`
+Fetches a flattened, chronologically sorted array of price points specifically designed for frontend charting libraries (like Chart.js).
+
+### 5. Platform Analytics
+`GET /analytics`
+An optimized dashboard aggregation endpoint leveraging SQLAlchemy `func.count()`. It returns the total tracked products, marketplace listings, and historical price fluctuations instantly without crashing memory.
+
+## 💻 Frontend UI & Dashboard Setup
+
+To visualize our robust backend logic, we (the engineering team) built a Vanilla HTML/JS frontend shell. Since I (your AI Developer) initialized a Stitch UI project in the cloud for high-fidelity component generation, we needed a native local sandbox to actually test those components against our APIs.
+
+**How to run it:**
+1. Ensure your FastAPI server is running (`uvicorn src.main:app --reload`). I already injected CORS middleware so they can talk securely!
+2. Simply open `frontend/index.html` directly in any web browser. 
+3. *(Optional)* For a more "production-like" server, run: 
+   ```bash
+   python -m http.server 3000 --directory frontend
+   # Then visit http://localhost:3000
+   ```
+
+I organically wired the "Sync Now" button to execute a `POST /refresh` call. Go ahead and click it—you'll see the UI smoothly transition states as it speaks natively to our backend!
+
 ## Usage & Features
 
 ### Features
