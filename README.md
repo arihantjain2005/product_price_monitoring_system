@@ -12,15 +12,18 @@ E-commerce businesses need to track competitor pricing across platforms. This sy
 
 ### Setup & Installation
 ```bash
-# Set up a virtual environment
+# Set up a virtual environment (Windows)
 python -m venv venv
-# Activate the environment (Windows)
 .\venv\Scripts\activate
-# Activate the environment (Mac/Linux)
-# source venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
+
+# Initialize the SQLite Database
+python init_db.py
+
+# Run the API server
+uvicorn src.main:app --reload
 ```
 
 ### Configuration
