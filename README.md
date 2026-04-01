@@ -29,11 +29,35 @@ uvicorn src.main:app --reload
 ### Configuration
 *(Configuration instructions will be added here as we implement environmental variables)*
 
+## System Operations: Step-by-Step Guide
+
+### 1. Database Initialization
+Before running the API, you must initialize the local SQLite database. This creates the foundational models: `CanonicalProduct` (for deduplication), `SourceListing`, `PriceHistory`, `ApiUser` (for access control), and `PriceChangeEvent` (for reliable notifications).
+```bash
+python init_db.py
+```
+
+### 2. Running the API Server
+Start the FastAPI server. By default, it runs on `http://localhost:8000`.
+```bash
+uvicorn src.main:app --reload
+```
+*Note: Starting the server automatically initiates the Background Outbox Dispatcher loop.*
+
+### 3. API Authentication & Webhooks
+All core endpoints require an `X-API-Key` header. Requests are strictly tracked in the `api_usage` table. 
+To receive updates, clients POST their callback URL to `/webhooks`.
+
+### 4. Background Webhook Delivery
+The system uses a **Transactional Outbox Pattern**. When the ingestion engine detects a price variation, it writes the new price and an event flag to the DB within an atomic transaction. A separate async loop polls this table every 5 seconds and dispatches HTTP POST payloads to all active webhooks, ensuring zero event loss.
+
 ## Usage & Features
 
 ### Features
-*(List of features will be expanded as we build them out)*
-- Collects and deduplicates marketplace data asynchronously.
+- **Deduplication Engine**: Automatically binds marketplace listings to a `CanonicalProduct`.
+- **Idempotent Ingestion**: Will not rewrite identical price data natively protecting against DB bloat.
+- **Robust Scrapers**: Abstract `MarketplaceScraper` base utilizing `httpx` and `tenacity` exponential back-off retries.
+- **Transactional Webhooks**: Reliable notification delivery decoupled from parsing.
 
 ### API Documentation
 *(API Reference tables will be added as endpoints are built)*

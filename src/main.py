@@ -2,12 +2,27 @@ from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from contextlib import asynccontextmanager
+import asyncio
 
 from src.api.webhooks import router as webhooks_router
+from src.services.dispatcher import process_outbox
+
+async def dispatcher_loop():
+    while True:
+        await process_outbox()
+        await asyncio.sleep(5)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    task = asyncio.create_task(dispatcher_loop())
+    yield
+    task.cancel()
 
 app = FastAPI(
     title="Product Price Monitoring API",
-    description="Real-time tracking of marketplace product pricing and availability."
+    description="Real-time tracking of marketplace product pricing and availability.",
+    lifespan=lifespan
 )
 
 app.include_router(webhooks_router)
