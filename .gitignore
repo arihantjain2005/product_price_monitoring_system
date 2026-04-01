@@ -18,15 +18,17 @@ __pycache__/
 # Databases
 *.sqlite3
 *.db
+*.db-shm
+*.db-wal
 
 # OS generated files
 .DS_Store
 Thumbs.db
 
 # Temporary Data & Artifacts
-*-wal
-*-shm
-tests_qa.py
+*.txt
+!requirements.txt
+*.bak
 
 # IDE & Editor configs
 .vscode/

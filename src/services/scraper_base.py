@@ -1,5 +1,5 @@
 import logging
-from abc import ABC, abstractmethod
+# No abc required
 from typing import Any, List, Dict
 import httpx
 from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type, before_sleep_log
@@ -7,14 +7,14 @@ from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-class MarketplaceScraper(ABC):
-    def __init__(self):
+class LocalFileScraper:
+    def __init__(self, source_name: str):
+        self._source_name = source_name
         self.client = httpx.AsyncClient(timeout=30.0)
 
     @property
-    @abstractmethod
     def source_name(self) -> str:
-        pass
+        return self._source_name
 
     @retry(
         stop=stop_after_attempt(3),
@@ -23,29 +23,50 @@ class MarketplaceScraper(ABC):
         before_sleep=before_sleep_log(logger, logging.WARNING)
     )
     async def fetch_data(self, url: str) -> Any:
-        logger.info(f"[{self.source_name}] Fetching data from: {url}")
-        response = await self.client.get(url)
-        response.raise_for_status()
-        return response.json()
+        if url.startswith("http://") or url.startswith("https://"):
+            logger.info(f"[{self.source_name}] Fetching data from: {url}")
+            response = await self.client.get(url)
+            response.raise_for_status()
+            return response.json()
+        else:
+            logger.info(f"[{self.source_name}] Reading local data from: {url}")
+            import json
+            import asyncio
+            def _read_file():
+                with open(url, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            return await asyncio.to_thread(_read_file)
 
     @property
-    @abstractmethod
     def field_mapping(self) -> Dict[str, str]:
-        pass
+        return {
+            "source_id": "product_id",
+            "brand": "brand",
+            "name": "model",
+            "price": "price",
+            "url": "product_url",
+            "category": "category"
+        }
 
     async def parse_products(self, data: Any) -> List[Dict[str, Any]]:
         results = []
         mapping = self.field_mapping
-        items = data.get(mapping.get("list_path", ""), [])
+        list_path = mapping.get("list_path")
+        
+        if list_path and isinstance(data, dict) and list_path in data:
+            items = data.get(list_path, [])
+        else:
+            items = [data] if isinstance(data, dict) else data
+            
         for item in items:
             product = {
-                "source_id": str(item.get(mapping["source_id"])),
+                "source_id": str(item.get(mapping.get("source_id", "source_id"))),
                 "marketplace_name": self.source_name,
-                "brand": item.get(mapping["brand"], "Unknown"),
-                "name": item.get(mapping["name"], "Unknown"),
-                "price": float(item.get(mapping["price"], 0)),
-                "url": item.get(mapping["url"], ""),
-                "category": item.get(mapping["category"], "General")
+                "brand": item.get(mapping.get("brand", "brand"), "Unknown"),
+                "name": item.get(mapping.get("name", "name"), "Unknown"),
+                "price": float(item.get(mapping.get("price", "price"), 0)),
+                "url": item.get(mapping.get("url", "url"), ""),
+                "category": item.get(mapping.get("category", "category"), "General")
             }
             if product["source_id"] and product["price"] > 0:
                 results.append(product)

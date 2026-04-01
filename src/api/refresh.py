@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, BackgroundTasks, status
 from src.database import SessionLocal
 from src.schemas.base import APIResponse
 from src.api.dependencies import verify_api_key
-from src.services.scrapers import GrailedScraper, FashionphileScraper, FirstDibsScraper
+# Redundant scraper module removed
 from src.services.ingestion import process_scraped_items
 from src.utils.logger import get_logger
 
@@ -10,21 +10,37 @@ logger = get_logger(__name__)
 router = APIRouter(prefix="/refresh", tags=["refresh"])
 
 async def execute_refresh():
+    import os
+    import asyncio
+    from src.services.scraper_base import LocalFileScraper
     db = SessionLocal()
     try:
-        scrapers = [
-            (GrailedScraper(), "https://example.com/api/grailed_mock"),
-            (FashionphileScraper(), "https://example.com/api/fashionphile_mock"),
-            (FirstDibsScraper(), "https://example.com/api/1stdibs_mock")
-        ]
+        scrapers = {
+            "grailed": LocalFileScraper("Grailed"),
+            "fashionphile": LocalFileScraper("Fashionphile"),
+            "1stdibs": LocalFileScraper("1stdibs")
+        }
         
+        base_dir = "sample_products/sample_products"
         all_results = []
-        for scraper, url in scrapers:
-            results = await scraper.scrape(url)
-            all_results.extend(results)
+        
+        if os.path.exists(base_dir):
+            for filename in os.listdir(base_dir):
+                if not filename.endswith(".json"):
+                    continue
+                file_path = os.path.join(base_dir, filename)
+                
+                # Identify marketplace mapping
+                for prefix, scraper in scrapers.items():
+                    if filename.startswith(prefix):
+                        results = await scraper.scrape(file_path)
+                        all_results.extend(results)
+                        break
+                
+        for scraper in scrapers.values():
             await scraper.close()
             
-        process_scraped_items(db, all_results)
+        await asyncio.to_thread(process_scraped_items, db, all_results)
         logger.info(f"Background refresh complete. Ingested {len(all_results)} items.")
     except Exception as e:
         logger.error(f"Background refresh failed: {e}")
