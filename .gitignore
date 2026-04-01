@@ -14,7 +14,6 @@ __pycache__/
 
 # Tests
 .pytest_cache/
-tests/
 
 # Databases
 *.sqlite3
