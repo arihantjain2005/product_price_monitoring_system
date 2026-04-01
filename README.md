@@ -63,4 +63,4 @@ To handle millions of price history rows efficiently without full table scans, w
 To guarantee zero event loss, we implemented the **Transactional Outbox Pattern**. When a price updates, we write the new `PriceHistory` and a `PriceChangeEvent` in the *exact same SQLite transaction*. A background dispatcher (built in Phase 4) asynchronously reads from this table and reliably delivers webhooks, independent of the scraper's execution thread.
 
 ### Extending to 100+ Data Sources
-*(Detailing the abstract parser layer and ingestion engine limits will go here when we finalize Phase 3)*
+We utilized strong Object-Oriented polymorphism to scale the ingestion engine. The `MarketplaceScraper` base class encapsulates all HTTP networking, timeout handling, and exponential backoff retry logic. To add 100+ sources, developers only need to write a new class (e.g. `EbayScraper(MarketplaceScraper)`) that strictly implements the `@abstractmethod def parse_products()`. This completely isolates custom marketplace parsers from the core ingestion mechanics.
