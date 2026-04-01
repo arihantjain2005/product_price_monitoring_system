@@ -94,7 +94,7 @@ const ProductsView = (() => {
             grid.querySelectorAll('.product-card').forEach(card => {
                 card.addEventListener('click', () => {
                     const id = card.dataset.productId;
-                    Components.toast(`Detail view for product #${id} coming in Step 18!`, 'info');
+                    Router.navigateToDetail(id);
                 });
             });
 

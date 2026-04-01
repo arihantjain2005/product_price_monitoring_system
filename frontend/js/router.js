@@ -47,6 +47,13 @@ const Router = (() => {
         route.render(dynamicView);
     }
 
+    function navigateToDetail(productId) {
+        pageTitle.textContent    = 'Product Detail';
+        pageSubtitle.textContent = 'Price history and marketplace listings for this product';
+        dynamicView.innerHTML    = Components.loader();
+        DetailView.render(dynamicView, productId);
+    }
+
     function init() {
         document.querySelectorAll('.nav-links a').forEach(link => {
             link.addEventListener('click', (e) => {
@@ -57,5 +64,5 @@ const Router = (() => {
         });
     }
 
-    return { init, navigate };
+    return { init, navigate, navigateToDetail };
 })();
