@@ -5,6 +5,8 @@ from src.models.base import Base
 
 DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./prices.db")
 
+from sqlalchemy import event
+
 # WAL mode improves concurrency in SQLite, avoiding "database is locked" errors
 engine = create_engine(
     DATABASE_URL, 
@@ -12,8 +14,12 @@ engine = create_engine(
 )
 
 if DATABASE_URL.startswith("sqlite"):
-    with engine.connect() as conn:
-        conn.exec_driver_sql("PRAGMA journal_mode=WAL;")
+    @event.listens_for(engine, "connect")
+    def set_sqlite_pragma(dbapi_connection, connection_record):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON;")
+        cursor.execute("PRAGMA journal_mode=WAL;")
+        cursor.close()
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

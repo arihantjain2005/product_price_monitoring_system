@@ -1,9 +1,10 @@
 import asyncio
 import httpx
 from datetime import datetime, timezone
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from src.database import SessionLocal
 from src.models.event import PriceChangeEvent
+from src.models.product import PriceHistory, SourceListing
 from src.models.webhook import WebhookSubscription
 from src.utils.logger import get_logger
 
@@ -35,7 +36,11 @@ async def dispatch_webhooks(client: httpx.AsyncClient, event: PriceChangeEvent, 
 async def process_outbox():
     db: Session = SessionLocal()
     try:
-        pending_events = db.query(PriceChangeEvent).filter(
+        pending_events = db.query(PriceChangeEvent).options(
+            joinedload(PriceChangeEvent.price_history)
+            .joinedload(PriceHistory.listing)
+            .joinedload(SourceListing.canonical_product)
+        ).filter(
             PriceChangeEvent.status == "pending"
         ).limit(50).all()
 

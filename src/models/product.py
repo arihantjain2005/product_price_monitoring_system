@@ -30,6 +30,13 @@ class SourceListing(Base):
     canonical_product = relationship("CanonicalProduct", back_populates="listings")
     price_history = relationship("PriceHistory", back_populates="listing", cascade="all, delete-orphan")
 
+    @property
+    def current_price(self) -> float | None:
+        if not self.price_history:
+            return None
+        latest = max(self.price_history, key=lambda x: x.timestamp)
+        return latest.price
+
 class PriceHistory(Base):
     __tablename__ = "price_history"
 
