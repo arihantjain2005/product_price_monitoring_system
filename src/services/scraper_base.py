@@ -28,9 +28,28 @@ class MarketplaceScraper(ABC):
         response.raise_for_status()
         return response.json()
 
+    @property
     @abstractmethod
-    async def parse_products(self, data: Any) -> List[Dict[str, Any]]:
+    def field_mapping(self) -> Dict[str, str]:
         pass
+
+    async def parse_products(self, data: Any) -> List[Dict[str, Any]]:
+        results = []
+        mapping = self.field_mapping
+        items = data.get(mapping.get("list_path", ""), [])
+        for item in items:
+            product = {
+                "source_id": str(item.get(mapping["source_id"])),
+                "marketplace_name": self.source_name,
+                "brand": item.get(mapping["brand"], "Unknown"),
+                "name": item.get(mapping["name"], "Unknown"),
+                "price": float(item.get(mapping["price"], 0)),
+                "url": item.get(mapping["url"], ""),
+                "category": item.get(mapping["category"], "General")
+            }
+            if product["source_id"] and product["price"] > 0:
+                results.append(product)
+        return results
 
     async def scrape(self, target_url: str) -> List[Dict[str, Any]]:
         try:

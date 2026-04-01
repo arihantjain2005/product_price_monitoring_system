@@ -20,18 +20,25 @@ def get_products(
     db: Session = Depends(get_db),
     user=Depends(verify_api_key)
 ):
-    query = db.query(CanonicalProduct).outerjoin(CanonicalProduct.listings).outerjoin(SourceListing.price_history)
+    id_query = db.query(CanonicalProduct.id).outerjoin(CanonicalProduct.listings).outerjoin(SourceListing.price_history)
 
     if category:
-        query = query.filter(CanonicalProduct.category == category)
+        id_query = id_query.filter(CanonicalProduct.category == category)
     if source:
-        query = query.filter(SourceListing.marketplace_name == source)
+        id_query = id_query.filter(SourceListing.marketplace_name == source)
     if min_price is not None:
-        query = query.filter(PriceHistory.price >= min_price)
+        id_query = id_query.filter(PriceHistory.price >= min_price)
     if max_price is not None:
-        query = query.filter(PriceHistory.price <= max_price)
+        id_query = id_query.filter(PriceHistory.price <= max_price)
 
-    products = query.group_by(CanonicalProduct.id).offset(skip).limit(limit).all()
+    product_ids = [row[0] for row in id_query.group_by(CanonicalProduct.id).offset(skip).limit(limit).all()]
+
+    if not product_ids:
+        products = []
+    else:
+        products = db.query(CanonicalProduct).options(
+            joinedload(CanonicalProduct.listings).joinedload(SourceListing.price_history)
+        ).filter(CanonicalProduct.id.in_(product_ids)).all()
 
     return APIResponse(success=True, data=products)
 

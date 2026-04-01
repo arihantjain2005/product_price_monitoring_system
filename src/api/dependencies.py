@@ -13,8 +13,9 @@ def verify_api_key(request: Request, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API Key")
     
     # Rate Limiting Logic: Max 60 requests per minute
-    from datetime import datetime, timezone, timedelta
-    one_minute_ago = datetime.now(timezone.utc) - timedelta(minutes=1)
+    from src.models.auth import utc_now
+    from datetime import timedelta
+    one_minute_ago = utc_now() - timedelta(minutes=1)
     
     recent_requests = db.query(ApiUsage).filter(
         ApiUsage.api_user_id == user.id,
