@@ -8,6 +8,7 @@ import asyncio
 from src.api.webhooks import router as webhooks_router
 from src.api.refresh import router as refresh_router
 from src.api.products import router as products_router
+from src.api.analytics import router as analytics_router
 from src.services.dispatcher import process_outbox
 
 async def dispatcher_loop():
@@ -30,6 +31,7 @@ app = FastAPI(
 app.include_router(webhooks_router)
 app.include_router(refresh_router)
 app.include_router(products_router)
+app.include_router(analytics_router)
 
 @app.exception_handler(StarletteHTTPException)
 async def http_exception_handler(request: Request, exc: StarletteHTTPException):

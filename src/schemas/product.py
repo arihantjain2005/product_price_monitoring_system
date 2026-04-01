@@ -25,4 +25,5 @@ class ProductResponse(BaseModel):
     brand: str
     name: str
     category: str
+    created_at: datetime
     listings: List[SourceListingResponse] = []

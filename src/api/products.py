@@ -34,3 +34,46 @@ def get_products(
     products = query.group_by(CanonicalProduct.id).offset(skip).limit(limit).all()
 
     return APIResponse(success=True, data=products)
+
+from fastapi import HTTPException
+from sqlalchemy.orm import joinedload
+
+@router.get("/{product_id}", response_model=APIResponse[ProductResponse])
+def get_product(
+    product_id: int,
+    db: Session = Depends(get_db),
+    user=Depends(verify_api_key)
+):
+    product = db.query(CanonicalProduct).options(
+        joinedload(CanonicalProduct.listings).joinedload(SourceListing.price_history)
+    ).filter(CanonicalProduct.id == product_id).first()
+
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    return APIResponse(success=True, data=product)
+
+@router.get("/{product_id}/history", response_model=APIResponse[list[dict]])
+def get_product_history(
+    product_id: int,
+    db: Session = Depends(get_db),
+    user=Depends(verify_api_key)
+):
+    product = db.query(CanonicalProduct).options(
+        joinedload(CanonicalProduct.listings).joinedload(SourceListing.price_history)
+    ).filter(CanonicalProduct.id == product_id).first()
+
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    history_flat = []
+    for listing in product.listings:
+        for history in listing.price_history:
+            history_flat.append({
+                "marketplace": listing.marketplace_name,
+                "price": history.price,
+                "timestamp": history.timestamp.isoformat()
+            })
+            
+    history_flat.sort(key=lambda x: x["timestamp"])
+    return APIResponse(success=True, data=history_flat)
