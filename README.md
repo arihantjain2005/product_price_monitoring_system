@@ -56,106 +56,78 @@ product_price_monitoring_system/
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Getting Started: Step-by-Step Guide
 
 ### Prerequisites
 - Python 3.9 or higher
-- pip (comes with Python)
-- A terminal (PowerShell on Windows works great)
+- pip (installed with Python)
+- Windows OS (for `start.bat` script)
 
-### 1. Clone & Setup
-
+### Step 1: Clone & Setup Environment
+Open your terminal (PowerShell or Command Prompt) and set up your virtual space:
 ```bash
-# Create and activate virtual environment
+# Create the virtual environment
 python -m venv venv
 
-# Windows
+# Activate it (Windows)
 .\venv\Scripts\activate
 
-# macOS / Linux
-source venv/bin/activate
-
-# Install all dependencies
+# Install all required packages
 pip install -r requirements.txt
 ```
 
-### 2. Initialize the Database
-
-This creates all the SQLite tables from scratch — no SQL files needed, SQLAlchemy handles it.
-
+### Step 2: Initialize the Database
+This creates a blank SQLite database schema perfectly mapped to our SQLAlchemy models.
 ```bash
 python init_db.py
 ```
+*Expected Output: `Database tables created successfully!`*
 
-You'll see: `Database tables created successfully!`
-
-### 3. Seed Test Data
-
-This does two things: injects a test API key so you can actually hit the endpoints, and populates 3 sample products (including a deliberate duplicate to prove the deduplication engine works).
-
+### Step 3: Seed API Credentials
+This script will instantly generate a developer authorization token in the DB required for API access.
 ```bash
 python seed_db.py
 ```
+> 💡 **Your API Key is:** `entrupy-intern-test-key-2026` — use this in all HTTP requests to the backend.
 
-Output you should see:
-```
-Successfully created test ApiUser with key: 'entrupy-intern-test-key-2026'
-Successfully seeded 3 mock products (including 1 Canonical Duplicate test) via Idempotent Ingestion.
-```
+### Step 4: Run the Application!
 
-> 💡 **Your API Key is:** `entrupy-intern-test-key-2026` — use this in all request headers.
-
-### 4. Run the API Server
-
+**Option A: The Automatic Way (Windows)**
+You don't need to manually type server execution commands. Just run the provided batch script:
 ```bash
-uvicorn src.main:app --reload
+.\start.bat
 ```
+*(Or simply double-click **`start.bat`** from your File Explorer!)*
+This executes both the FastAPI Backend and the Frontend Dashboard simultaneously.
 
-The API is now live at `http://localhost:8000`.  
-Interactive docs: `http://localhost:8000/docs`
+**Option B: The Manual Way (Mac/Linux/Windows)**
+If you prefer to start them manually, open **two separate terminal windows**.
 
-> The server automatically starts the **Background Outbox Dispatcher** loop on boot — no extra process needed.
-
-### 5. Launch the Frontend Dashboard
-
-With the API running, open a second terminal:
-
+**Terminal 1 (Backend API):**
 ```bash
-python -m http.server 3000 --directory frontend
+# In the root project folder
+python src/main.py
 ```
+*Backend is now live at: `http://127.0.0.1:8000` (Swagger UI at `/docs`)*
 
-Then visit `http://localhost:3000` in your browser.  
-You'll see a dark-mode executive dashboard that immediately pulls live stats from your running API. The **"Sync Now"** button triggers a real `POST /refresh` call with animated state transitions.
+**Terminal 2 (Frontend UI):**
+```bash
+# Navigate INTO the frontend folder
+cd frontend
 
-#### What you'll see on the Dashboard (Step 16)
-When the page loads, the **Dashboard View** instantly fires a `GET /analytics` call to your running backend and populates three live metric cards:
+# Start a local web server
+python -m http.server 3000 --bind 127.0.0.1
+```
+*Frontend is now live at: `http://127.0.0.1:3000`*
 
-- **Canonical Products** — how many unique products are being tracked
-- **Tracked Listings** — total marketplace listings across all sources  
-- **Price Fluctuations** — total recorded price change events
+### Step 5: Ingest Sample Data
+Once your browser opens the Dashboard (`http://127.0.0.1:3000`), click the **"Sync Now"** button. This will trigger the backend `/refresh` endpoint, automatically scanning and ingesting all 90 items perfectly from your `sample_products/sample_products` repository into the relational database!
 
-Click "Products Hub" in the sidebar to switch to the filterable product grid. The sidebar navigation is fully wired — each click transitions cleanly to the corresponding view.
-
-#### Frontend Architecture: Modular SRP Design
-
-We deliberately avoided writing a monolithic `app.js` file. Instead, every JS file has exactly one job:
-
-| File | What it does (and only this) |
-|---|---|
-| `js/config.js` | Stores `API_BASE_URL` and `API_KEY` constants — frozen, immutable |
-| `js/api.js` | All `fetch()` calls with timeout handling and error propagation |
-| `js/components.js` | Pure render functions — returns HTML strings, no API calls |
-| `js/router.js` | Maps nav clicks to view renders, manages active states |
-| `js/views/dashboard.js` | Dashboard screen only: renders skeleton, fetches analytics, populates cards |
-| `js/views/products.js` | Products screen only: filter bar, product grid, error states |
-| `js/app.js` | Bootstrap entry point — initializes router, API health check, global events |
-
-CSS follows the same discipline under `styles/`:
-- `base.css` — design tokens and global reset only
-- `sidebar.css`, `dashboard.css`, `products.css` — one file per screen
-- `components.css` — shared reusable elements (buttons, loaders, toast notifications)
-
-This means adding a new screen in the future requires creating two files (`views/newscreen.js` + `styles/newscreen.css`) and a single route entry — nothing else needs to change.
+#### What you'll see on the Dashboard
+When the page loads, the Dashboard fires a `GET /analytics` call to your backend:
+- **Canonical Products** — how many conceptually unique items exist across sources.
+- **Tracked Listings** — total unique listings tracked dynamically.
+- **Price Fluctuations** — count of discrete price shifts safely recorded.
 
 ---
 
@@ -183,7 +155,7 @@ No auth required. Returns `{"success": true, "message": "API is healthy"}`. Grea
 ```
 POST /refresh
 ```
-Fires the scraping + ingestion pipeline in the background. Returns **202 immediately** — your client doesn't wait for scraping to finish.
+Fires the local file scraping + ingestion pipeline in the background loop over your `sample_products` directory. Returns **202 immediately** — your client doesn't wait for disk I/O to finish.
 
 ### Browse & Filter Products
 ```
@@ -210,30 +182,11 @@ GET /products/{id}/history
 ```  
 Returns a flat, chronologically sorted array of price points — designed to feed directly into charting libraries like Chart.js.
 
-```json
-[
-  { "marketplace": "Grailed",      "price": 12500.0, "timestamp": "2026-04-01T..." },
-  { "marketplace": "Fashionphile", "price": 13000.0, "timestamp": "2026-04-01T..." }
-]
-```
-
 ### Platform Analytics
 ```
 GET /analytics  
 ```
 Returns aggregated system-wide stats in a single fast query (uses `func.count()` — no Python-side aggregation).
-
-```json
-{
-  "summary": {
-    "total_canonical_products": 2,
-    "total_tracked_listings": 3,
-    "total_recorded_price_fluctuations": 3
-  },
-  "by_category": { "Watches": 1, "Handbags": 1 },
-  "by_marketplace": { "Grailed": 1, "Fashionphile": 1, "1stdibs": 1 }
-}
-```
 
 ### Register Webhook
 ```
@@ -250,7 +203,7 @@ Once registered, your server receives a POST payload whenever any tracked produc
 
 ### Deduplication: The CanonicalProduct Model
 
-The Rolex Submariner listed on Grailed and the same watch on Fashionphile are the *same product* — your analytics should reflect that. We solve this with a `CanonicalProduct` layer. The ingestion engine looks up (or creates) a single canonical record per `brand + name` pair, then attaches each marketplace's listing beneath it. This makes cross-platform price comparison a first-class citizen of the data model.
+The Rolex Submariner listed on Grailed and the same watch on Fashionphile are the *same product* — your analytics should reflect that. We solve this with a `CanonicalProduct` layer. The ingestion engine looks up (or creates) a single canonical record per `brand + name` pair, then attaches each marketplace's listing beneath it. This makes cross-platform price comparison a first-class citizen of out data model.
 
 ### Zero-Loss Notifications: The Transactional Outbox Pattern
 
@@ -264,11 +217,11 @@ We put a composite index on `(source_listing_id, timestamp DESC)` on the `PriceH
 
 ### Idempotent Ingestion
 
-If you scrape the same product 50 times in an hour and the price hasn't changed, the database stays clean — no duplicate rows. We only write a new `PriceHistory` entry when the price *actually* differs from the most recent one. This makes the ingestion engine safe to run as frequently as you want.
+If you scrape the same product 50 times in an hour and the price hasn't changed, the database stays clean — no duplicate rows. We only write a new `PriceHistory` entry when the price *actually* differs from the most recent one. 
 
-### Extending to 100+ Sources
+### Unified Data Ingestion: LocalFileScraper
 
-The `MarketplaceScraper` abstract class handles all the networking complexity — HTTP timeouts, exponential backoff retries via Tenacity, structured logging. To add a new marketplace, you write one class that inherits from it and implements a single method: `parse_products()`. The rest wires up automatically.
+To eliminate scraper class redundancies against identically structured objects, the system implements a strict, solid `LocalFileScraper`. At execution, `/refresh` parses your internal directory files on the fly asynchronously via threadpools and directly parses JSON structures to map to database models without defining hundreds of manual routing overrides.
 
 ### Frontend Architecture (Modular SRP)
 
