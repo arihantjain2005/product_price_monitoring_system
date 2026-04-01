@@ -54,10 +54,10 @@ pytest
 ## Architecture & Design Decisions
 
 ### How does price history scale to millions of rows?
-*(Detailing our indexing design and data partitioning strategies will go here after schema implementation)*
+To handle millions of price history rows efficiently without full table scans, we implemented a composite index on `(source_listing_id, timestamp.desc())` in the `PriceHistory` model. This creates O(log N) lookup times when charting price history for an individual product listing. If this system scales beyond single-node SQLite capabilities, PostgreSQL partitions by month based on `timestamp` would be the immediate next step.
 
 ### Notification Implementation
-*(Detailing the Transactional Outbox pattern design will go here after building the Event architecture)*
+To guarantee zero event loss, we implemented the **Transactional Outbox Pattern**. When a price updates, we write the new `PriceHistory` and a `PriceChangeEvent` in the *exact same SQLite transaction*. A background dispatcher (built in Phase 4) asynchronously reads from this table and reliably delivers webhooks, independent of the scraper's execution thread.
 
 ### Extending to 100+ Data Sources
 *(Detailing the abstract parser layer and ingestion engine limits will go here when we finalize Phase 3)*
