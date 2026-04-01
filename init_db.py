@@ -6,6 +6,7 @@ from src.database import init_db
 from src.models.product import CanonicalProduct, SourceListing, PriceHistory
 from src.models.auth import ApiUser, ApiUsage
 from src.models.event import PriceChangeEvent
+from src.models.webhook import WebhookSubscription
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

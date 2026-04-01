@@ -3,10 +3,14 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from src.api.webhooks import router as webhooks_router
+
 app = FastAPI(
     title="Product Price Monitoring API",
     description="Real-time tracking of marketplace product pricing and availability."
 )
+
+app.include_router(webhooks_router)
 
 @app.exception_handler(StarletteHTTPException)
 async def http_exception_handler(request: Request, exc: StarletteHTTPException):
