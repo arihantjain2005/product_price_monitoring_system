@@ -38,6 +38,8 @@ const Api = (() => {
         getProduct:      (id)         => request('GET',  `/products/${id}`),
         getHistory:      (id)         => request('GET',  `/products/${id}/history`),
         triggerRefresh:  ()           => request('POST', '/refresh'),
-        registerWebhook: (url)        => request('POST', '/webhooks', { target_url: url })
+        getWebhooks:     ()           => request('GET',  '/webhooks'),
+        registerWebhook: (url)        => request('POST', '/webhooks', { target_url: url }),
+        deleteWebhook:   (id)         => request('DELETE', `/webhooks/${id}`)
     };
 })();

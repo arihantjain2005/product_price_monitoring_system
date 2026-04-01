@@ -10,14 +10,14 @@ from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-async def dispatch_webhooks(client: httpx.AsyncClient, event_id: int, payload: dict, webhooks: list[WebhookSubscription]):
-    for hook in webhooks:
+async def dispatch_webhooks(client: httpx.AsyncClient, event_id: int, payload: dict, webhook_urls: list[str]):
+    for url in webhook_urls:
         try:
-            response = await client.post(hook.target_url, json=payload, timeout=10.0)
+            response = await client.post(url, json=payload, timeout=10.0)
             response.raise_for_status()
-            logger.info(f"Delivered event {event_id} to {hook.target_url}")
+            logger.info(f"Delivered event {event_id} to {url}")
         except Exception as e:
-            logger.error(f"Failed to deliver event {event_id} to {hook.target_url}: {e}")
+            logger.error(f"Failed to deliver event {event_id} to {url}: {e}")
 
 def _fetch_and_prepare_events():
     db: Session = SessionLocal()
@@ -47,6 +47,7 @@ def _fetch_and_prepare_events():
             return [], [], []
 
         events_data = []
+        event_ids = []
         for event in pending_events:
             event.status = "processing"
             history = event.price_history
@@ -61,11 +62,15 @@ def _fetch_and_prepare_events():
                 "new_price": history.price,
                 "timestamp": history.timestamp.isoformat()
             }))
+            event_ids.append(event.id)
         db.commit()
+
+        # Extract target_url as plain strings BEFORE closing the session
+        # to avoid DetachedInstanceError when used across async threads
+        webhook_urls = [hook.target_url for hook in active_webhooks]
         db.close()
-        
-        # We return detached minimal webhook data that is safe to use across threads
-        return events_data, active_webhooks, [event.id for event, _ in events_data]
+
+        return events_data, webhook_urls, event_ids
 
     except Exception as e:
         logger.error(f"Outbox fetch failed: {e}")
@@ -90,13 +95,13 @@ def _mark_events_processed(event_ids: list[int]):
         db.close()
 
 async def process_outbox():
-    events_data, active_webhooks, event_ids = await asyncio.to_thread(_fetch_and_prepare_events)
+    events_data, webhook_urls, event_ids = await asyncio.to_thread(_fetch_and_prepare_events)
     
     if not events_data:
         return
 
     async with httpx.AsyncClient() as client:
         for event_id, payload in events_data:
-            await dispatch_webhooks(client, event_id, payload, active_webhooks)
+            await dispatch_webhooks(client, event_id, payload, webhook_urls)
             
     await asyncio.to_thread(_mark_events_processed, event_ids)

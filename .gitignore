@@ -49,3 +49,16 @@ build/
 
 # Node (if frontend tooling ever added)
 node_modules/
+
+# Type checking & linting caches
+.mypy_cache/
+.ruff_cache/
+
+# pip
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Packaging artifacts
+*.zip
+*.tar.gz
+*.whl

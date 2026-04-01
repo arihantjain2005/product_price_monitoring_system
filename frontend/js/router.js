@@ -22,13 +22,7 @@ const Router = (() => {
         webhooks: {
             title:    'Webhook Registry',
             subtitle: 'Manage downstream notification endpoints',
-            render:   (el) => {
-                el.innerHTML = `
-                    <div class="empty-state">
-                        <span class="empty-state-icon">⬡</span>
-                        <p>Webhook management UI coming in a future step.</p>
-                    </div>`;
-            }
+            render:   (el) => WebhooksView.render(el)
         }
     };
 

@@ -109,3 +109,32 @@ def test_api_analytics(client, db_session):
     assert data["summary"]["total_tracked_listings"] == 1
     assert "Grailed" in data["by_marketplace"]
     assert data["by_marketplace"]["Grailed"] == 1
+
+def test_api_webhooks(client, db_session):
+    headers = {"X-API-Key": "test_api_key"}
+    
+    # Register webhook
+    register_response = client.post("/webhooks", json={"target_url": "https://example.com/webhook"}, headers=headers)
+    assert register_response.status_code == 201
+    webhook_id = register_response.json()["data"]["id"]
+    
+    # Get webhooks
+    get_response = client.get("/webhooks", headers=headers)
+    assert get_response.status_code == 200
+    webhooks = get_response.json()["data"]
+    assert len(webhooks) == 1
+    assert webhooks[0]["target_url"] == "https://example.com/webhook/" or webhooks[0]["target_url"] == "https://example.com/webhook"
+    assert webhooks[0]["is_active"] == True
+    
+    # Delete webhook
+    delete_response = client.delete(f"/webhooks/{webhook_id}", headers=headers)
+    assert delete_response.status_code == 200
+    
+    # Verify deletion (soft delete, should not appear in GET)
+    get_response_empty = client.get("/webhooks", headers=headers)
+    assert get_response_empty.status_code == 200
+    assert len(get_response_empty.json()["data"]) == 0
+    
+    # Delete non-existent webhook
+    delete_404 = client.delete("/webhooks/999", headers=headers)
+    assert delete_404.status_code == 404

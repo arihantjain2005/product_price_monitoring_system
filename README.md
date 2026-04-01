@@ -39,6 +39,7 @@ product_price_monitoring_system/
 │   │   ├── sidebar.css
 │   │   ├── dashboard.css
 │   │   ├── products.css
+│   │   ├── detail.css        # Product detail page styles
 │   │   └── components.css    # Shared buttons, loaders, toasts
 │   └── js/                   # Modular JavaScript (SRP architecture)
 │       ├── config.js         # All runtime constants
@@ -46,8 +47,10 @@ product_price_monitoring_system/
 │       ├── components.js     # Pure render functions
 │       ├── router.js         # Client-side navigation
 │       ├── views/
-│       │   ├── dashboard.js
-│       │   └── products.js
+│       │   ├── dashboard.js  # Dashboard stats view
+│       │   ├── products.js   # Product list + filter view
+│       │   ├── detail.js     # Product detail + chart view
+│       │   └── webhooks.js   # Webhook management view
 │       └── app.js            # Bootstrap entry point
 ├── init_db.py            # Creates all database tables
 ├── seed_db.py            # Seeds test API key + mock products
@@ -188,14 +191,88 @@ GET /analytics
 ```
 Returns aggregated system-wide stats in a single fast query (uses `func.count()` — no Python-side aggregation).
 
-### Register Webhook
+### Register a Webhook
 ```
 POST /webhooks
 ```
+Body:
 ```json
 { "target_url": "https://your-server.com/price-alerts" }
 ```
-Once registered, your server receives a POST payload whenever any tracked product's price changes.
+Registers a new downstream notification endpoint. Once registered, your server receives a `POST` payload on every price change detected during a `/refresh`.
+
+**Example payload delivered to your webhook URL:**
+```json
+{
+  "event_id": 12,
+  "product_id": 5,
+  "brand": "Chanel",
+  "name": "Classic Flap Bag",
+  "marketplace": "Fashionphile",
+  "new_price": 7850.00,
+  "timestamp": "2026-04-02T02:00:00+00:00"
+}
+```
+
+### List All Active Webhooks
+```
+GET /webhooks
+```
+Returns all currently active (non-deleted) webhook subscriptions.
+
+**Example Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "target_url": "https://webhook.site/your-unique-id",
+      "is_active": true,
+      "created_at": "2026-04-02T02:00:00"
+    }
+  ]
+}
+```
+
+### Delete a Webhook
+```
+DELETE /webhooks/{id}
+```
+Soft-deletes the webhook (sets `is_active = false`) without removing the row from the database, preserving audit history. Returns `200 OK` on success, `404` if the ID doesn't exist.
+
+---
+
+## 🔔 Testing Webhook Notifications
+
+The easiest way to test that price-change notifications are actually delivered:
+
+### Step 1: Get a free inspection URL
+Visit **[https://webhook.site](https://webhook.site)** — you'll be given a unique URL like:
+```
+https://webhook.site/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+```
+Keep this tab open. Every request sent to it appears live on the page.
+
+### Step 2: Register the URL via the UI
+1. Start the app (`start.bat`)
+2. Open the browser at `http://127.0.0.1:3000`
+3. Click **Webhooks** in the left sidebar
+4. Paste your `webhook.site` URL into the input and click **Add Webhook**
+
+### Step 3: Trigger a price change
+Open any sample product JSON file in `sample_products/sample_products/`, change a `price` field, and save the file.
+
+### Step 4: Sync
+Click the **Sync Now** button on the dashboard. Within ~5 seconds, a POST notification will appear on your `webhook.site` page with the full price-change payload.
+
+> 💡 You can also register webhooks directly via API:
+> ```bash
+> curl -X POST http://127.0.0.1:8000/webhooks \
+>   -H "X-API-Key: entrupy-intern-test-key-2026" \
+>   -H "Content-Type: application/json" \
+>   -d '{"target_url": "https://webhook.site/your-id"}'
+> ```
 
 ---
 
@@ -274,4 +351,4 @@ pytest
 5. **`test_ingestion_creates_canonical_and_listings`:** Guarantees scraping an unseen product creates the root canonical tracker and child list perfectly.
 6. **`test_ingestion_updates_existing_listing`:** Verifies **idempotency** — an identically priced second scrape doesn't bloat the database, but a shifted price effectively creates a secondary `PriceHistory` entry.
 7. **`test_outbox_creates_events_on_price_change`:** Verifies Outbox behavior: Initial scrapes DO NOT create price shift triggers. But identical listings with a newly discovered dropped price create a `pending` event trigger perfectly.
-8. **`test_webhook_delivery_failure_recovery`:** Mocks `httpx.post` failure internally to prove our background webhook dispatcher recovers cleanly and leaves the event as `pending` indefinitely rather than crashing the thread.
+8. **`test_api_webhooks`:** Full lifecycle test for the webhook management API — registers a webhook (`POST`), verifies it appears in `GET /webhooks`, soft-deletes it (`DELETE`), confirms it no longer appears in the list, and asserts a `404` is returned on a second delete of the same ID.
