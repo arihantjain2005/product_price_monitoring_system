@@ -6,6 +6,34 @@ E-commerce businesses live or die by pricing intelligence. This system solves a 
 
 ---
 
+## 📊 System Dashboard
+![Dashboard Preview](assets/dashboard-preview.png)
+
+*The central dashboard displaying real-time canonical product aggregation, active listings, and safely captured price fluctuations.*
+
+---
+
+## 🛍️ Products Hub & Deduplication
+![Products Hub](assets/products-preview.png)
+
+*The responsive grid demonstrating the Canonical Product deduplication logic. Multiple marketplace listings are cleanly nested under single unique items.*
+
+---
+
+### 🔔 Webhook Management Interface
+![Webhook Management](assets/webhook-preview.png)
+
+*The frontend UI allowing downstream consumers to easily register their endpoints to listen for real-time price changes.*
+
+---
+
+### ⚡ Real-Time Alert Delivery
+![Notification Delivery](assets/webhook-notification.png)
+
+*Proof of the Outbox Pattern in action: The background dispatcher successfully broadcasting a live JSON payload to a subscribed endpoint the moment a price fluctuation is detected.*
+
+---
+
 ## 📁 Project Structure
 
 ```
