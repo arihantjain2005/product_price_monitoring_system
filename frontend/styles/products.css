@@ -97,3 +97,45 @@
 
 .listing-marketplace { color: var(--text-muted); }
 .listing-price { font-weight: 600; color: var(--success); }
+
+/* Pagination */
+.pagination-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.25rem;
+    margin-top: 2rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--border-subtle);
+    animation: slideUp var(--ease-out) both;
+}
+
+.btn-page {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+    padding: 0.55rem 1.1rem;
+    border-radius: 8px;
+    font-family: var(--font);
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--ease);
+}
+
+.btn-page:hover:not(:disabled) {
+    background: var(--bg-surface-hover);
+    border-color: var(--brand);
+}
+
+.btn-page:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.page-info {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    min-width: 60px;
+    text-align: center;
+}

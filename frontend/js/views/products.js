@@ -4,54 +4,100 @@
  * Uses Api service and Components library. No raw fetch calls.
  */
 const ProductsView = (() => {
+    let debounceTimer = null;
+    let currentPage = 0;
+    const PAGE_SIZE = 12;
 
     async function render(container) {
         container.innerHTML = `
             <div class="filter-bar">
-                <input type="text"   id="filter-category"  placeholder="Filter by category...">
-                <input type="number" id="filter-min-price" placeholder="Min price ($)">
-                <input type="number" id="filter-max-price" placeholder="Max price ($)">
+                <input type="text"   id="filter-category"  placeholder="🔍  Search by category..." autocomplete="off">
+                <select id="filter-source">
+                    <option value="">All Marketplaces</option>
+                    <option value="Grailed">Grailed</option>
+                    <option value="Fashionphile">Fashionphile</option>
+                    <option value="1stdibs">1stdibs</option>
+                </select>
+                <input type="number" id="filter-min-price" placeholder="Min $" min="0" step="any">
+                <input type="number" id="filter-max-price" placeholder="Max $" min="0" step="any">
             </div>
-            <div id="products-grid" class="products-grid">
-                ${Components.loader()}
+            <div id="products-grid" class="products-grid"></div>
+            <div class="pagination-bar" id="pagination-bar" style="display:none;">
+                <button class="btn-page" id="btn-prev">← Prev</button>
+                <span   class="page-info" id="page-info">Page 1</span>
+                <button class="btn-page" id="btn-next">Next →</button>
             </div>`;
 
-        document.getElementById('filter-category').addEventListener('keyup',  loadProducts);
-        document.getElementById('filter-min-price').addEventListener('change', loadProducts);
-        document.getElementById('filter-max-price').addEventListener('change', loadProducts);
+        const debouncedLoad = () => {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => { currentPage = 0; _load(); }, 350);
+        };
 
-        await loadProducts();
+        document.getElementById('filter-category').addEventListener('keyup', debouncedLoad);
+        document.getElementById('filter-source').addEventListener('change', () => { currentPage = 0; _load(); });
+        document.getElementById('filter-min-price').addEventListener('change', () => { currentPage = 0; _load(); });
+        document.getElementById('filter-max-price').addEventListener('change', () => { currentPage = 0; _load(); });
 
-        container.querySelectorAll('.product-card').forEach(card => {
-            card.addEventListener('click', () => {
-                Components.toast(`Product detail view coming in Step 18!`, 'info');
-            });
+        document.getElementById('btn-prev').addEventListener('click', () => {
+            if (currentPage > 0) { currentPage--; _load(); }
         });
+        document.getElementById('btn-next').addEventListener('click', () => {
+            currentPage++;
+            _load();
+        });
+
+        await _load();
     }
 
-    async function loadProducts() {
+    async function _load() {
         const grid = document.getElementById('products-grid');
         if (!grid) return;
 
+        grid.innerHTML = Components.loader();
+
         const category = document.getElementById('filter-category')?.value.trim();
+        const source   = document.getElementById('filter-source')?.value;
         const minPrice = document.getElementById('filter-min-price')?.value;
         const maxPrice = document.getElementById('filter-max-price')?.value;
 
         const params = new URLSearchParams();
         if (category) params.set('category', category);
-        if (minPrice)  params.set('min_price', minPrice);
-        if (maxPrice)  params.set('max_price', maxPrice);
-        const qs = params.toString() ? `?${params.toString()}` : '';
-
-        grid.innerHTML = Components.loader();
+        if (source)   params.set('source', source);
+        if (minPrice) params.set('min_price', minPrice);
+        if (maxPrice) params.set('max_price', maxPrice);
+        params.set('skip',  currentPage * PAGE_SIZE);
+        params.set('limit', PAGE_SIZE);
 
         try {
-            const { data } = await Api.getProducts(qs);
+            const { data } = await Api.getProducts(`?${params.toString()}`);
+
+            const paginationBar = document.getElementById('pagination-bar');
+            const pageInfo      = document.getElementById('page-info');
+            const btnPrev       = document.getElementById('btn-prev');
+            const btnNext       = document.getElementById('btn-next');
+
             if (!data || data.length === 0) {
-                grid.innerHTML = Components.emptyState('No products match your filters.');
+                grid.innerHTML = Components.emptyState('No products match your filters. Try a broader search.');
+                if (currentPage === 0 && paginationBar) paginationBar.style.display = 'none';
                 return;
             }
+
             grid.innerHTML = data.map(p => Components.productCard(p)).join('');
+
+            if (paginationBar) {
+                paginationBar.style.display = 'flex';
+                if (pageInfo) pageInfo.textContent = `Page ${currentPage + 1}`;
+                if (btnPrev)  btnPrev.disabled = currentPage === 0;
+                if (btnNext)  btnNext.disabled = data.length < PAGE_SIZE;
+            }
+
+            grid.querySelectorAll('.product-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    const id = card.dataset.productId;
+                    Components.toast(`Detail view for product #${id} coming in Step 18!`, 'info');
+                });
+            });
+
         } catch (err) {
             grid.innerHTML = Components.emptyState('Could not load products. Is the API running?');
             Components.toast(`Products load failed: ${err.message}`, 'error');
@@ -60,3 +106,4 @@ const ProductsView = (() => {
 
     return { render };
 })();
+

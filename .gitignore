@@ -27,3 +27,23 @@ Thumbs.db
 *-wal
 *-shm
 tests_qa.py
+
+# IDE & Editor configs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Coverage & Test output
+.coverage
+htmlcov/
+coverage.xml
+*.log
+
+# Build / Distribution
+dist/
+build/
+*.egg-info/
+
+# Node (if frontend tooling ever added)
+node_modules/
