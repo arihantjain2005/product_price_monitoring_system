@@ -48,6 +48,22 @@ class LocalFileScraper:
             "category": "category"
         }
 
+    def _normalize_category(self, item: Dict[str, Any], mapping: Dict[str, str]) -> str:
+        raw_cat = str(item.get(mapping.get("category", "category"), "")).lower()
+        if not raw_cat or raw_cat == "none":
+            raw_cat = str(item.get("metadata", {}).get("garment_type", "")).lower()
+            
+        name = str(item.get(mapping.get("name", "name"), "")).lower()
+        
+        if "belt" in raw_cat or "belt" in name:
+            return "Belts"
+        elif "jewel" in raw_cat or "tiffany" in name:
+            return "Jewelry"
+        elif "apparel" in raw_cat or "shirt" in name or "jeans" in name or "hoodie" in name:
+            return "Apparel"
+            
+        return "General"
+
     async def parse_products(self, data: Any) -> List[Dict[str, Any]]:
         results = []
         mapping = self.field_mapping
@@ -66,7 +82,7 @@ class LocalFileScraper:
                 "name": item.get(mapping.get("name", "name"), "Unknown"),
                 "price": float(item.get(mapping.get("price", "price"), 0)),
                 "url": item.get(mapping.get("url", "url"), ""),
-                "category": item.get(mapping.get("category", "category"), "General")
+                "category": self._normalize_category(item, mapping)
             }
             if product["source_id"] and product["price"] > 0:
                 results.append(product)

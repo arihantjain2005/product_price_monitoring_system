@@ -233,6 +233,17 @@ The frontend follows Single Responsibility Principle as strictly as the backend:
 - `router.js` — navigation mapping only
 - `app.js` — bootstrap entry point only
 
+### Extending to 100+ Data Sources
+Right now, `LocalFileScraper` handles multiple local files gracefully. To extend to 100+ live HTTP sources:
+1. **Abstract Interface:** Currently, scrapers inherit from `ScraperBase(ABC)`. We'd enforce standard implementations for HTTP proxies, headers, and anti-bot evasion.
+2. **Distributed Queueing:** Instead of a simple `BackgroundTasks` loop, I would implement `Celery` + `Redis` or AWS SQS. Each distinct data source (Grailed, eBay, StockX) would be assigned its own async worker queue so that one slow source doesn't block the rest.
+3. **Category Normalization Pipeline:** Because 100+ sites will name categories differently, the `_normalize_category` function boils diverse strings down into broad constants ("Belts", "Apparel"). This mapping matrix would be isolated into an NLP service layer.
+
+### Known Limitations
+- **Authentication**: `X-API-Key` is static and sent as a raw header. In production, I would deploy OAuth2 or JWTs with expirations.
+- **Database Scaling**: SQLite `WAL` mode handles local concurrency nicely, but for serious reads/writes, migrating to a Dockerized PostgreSQL instance is mandatory.
+- **Polling Webhooks**: Right now the Outbox dispatcher polls the DB every 5 seconds. In real applications, I would use PostgreSQL `LISTEN/NOTIFY` or Redis Pub/Sub to instantly dispatch events without polling.
+
 ---
 
 ## 🛠 Tech Stack
@@ -253,5 +264,14 @@ The frontend follows Single Responsibility Principle as strictly as the backend:
 ```bash
 pytest
 ```
+*( Integration tests covering idempotency, authentication, and price detection are implemented in the `tests/` directory. )*
 
-*(Integration tests covering idempotency, authentication, and price detection are written in Phase 7.)*
+**The 8 Sample Test Cases implemented:**
+1. **`test_api_auth_failure`:** Verifies returning 401 Unauthorized securely when missing or providing incorrect `X-API-Key`.
+2. **`test_api_products_list_and_filter`:** Ensures filtering products by brand/category matches DB correctly.
+3. **`test_api_product_detail_and_history`:** Verifies canonical product details reliably join with nested price graphs and source listings.
+4. **`test_api_analytics`:** Verifies aggregated count accuracy for dashboard metric pipelines.
+5. **`test_ingestion_creates_canonical_and_listings`:** Guarantees scraping an unseen product creates the root canonical tracker and child list perfectly.
+6. **`test_ingestion_updates_existing_listing`:** Verifies **idempotency** — an identically priced second scrape doesn't bloat the database, but a shifted price effectively creates a secondary `PriceHistory` entry.
+7. **`test_outbox_creates_events_on_price_change`:** Verifies Outbox behavior: Initial scrapes DO NOT create price shift triggers. But identical listings with a newly discovered dropped price create a `pending` event trigger perfectly.
+8. **`test_webhook_delivery_failure_recovery`:** Mocks `httpx.post` failure internally to prove our background webhook dispatcher recovers cleanly and leaves the event as `pending` indefinitely rather than crashing the thread.

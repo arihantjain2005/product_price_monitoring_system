@@ -11,7 +11,14 @@ const ProductsView = (() => {
     async function render(container) {
         container.innerHTML = `
             <div class="filter-bar">
-                <input type="text"   id="filter-category"  placeholder="🔍  Search by category..." autocomplete="off">
+                <input type="text"   id="filter-search"  placeholder="🔍  Search products..." autocomplete="off">
+                <select id="filter-category">
+                    <option value="">All Categories</option>
+                    <option value="Belts">Belts</option>
+                    <option value="Jewelry">Jewelry</option>
+                    <option value="Apparel">Apparel</option>
+                    <option value="General">General</option>
+                </select>
                 <select id="filter-source">
                     <option value="">All Marketplaces</option>
                     <option value="Grailed">Grailed</option>
@@ -33,7 +40,8 @@ const ProductsView = (() => {
             debounceTimer = setTimeout(() => { currentPage = 0; _load(); }, 350);
         };
 
-        document.getElementById('filter-category').addEventListener('keyup', debouncedLoad);
+        document.getElementById('filter-search').addEventListener('keyup', debouncedLoad);
+        document.getElementById('filter-category').addEventListener('change', () => { currentPage = 0; _load(); });
         document.getElementById('filter-source').addEventListener('change', () => { currentPage = 0; _load(); });
         document.getElementById('filter-min-price').addEventListener('change', () => { currentPage = 0; _load(); });
         document.getElementById('filter-max-price').addEventListener('change', () => { currentPage = 0; _load(); });
@@ -55,12 +63,14 @@ const ProductsView = (() => {
 
         grid.innerHTML = Components.loader();
 
-        const category = document.getElementById('filter-category')?.value.trim();
+        const search   = document.getElementById('filter-search')?.value.trim();
+        const category = document.getElementById('filter-category')?.value;
         const source   = document.getElementById('filter-source')?.value;
         const minPrice = document.getElementById('filter-min-price')?.value;
         const maxPrice = document.getElementById('filter-max-price')?.value;
 
         const params = new URLSearchParams();
+        if (search)   params.set('search', search);
         if (category) params.set('category', category);
         if (source)   params.set('source', source);
         if (minPrice) params.set('min_price', minPrice);

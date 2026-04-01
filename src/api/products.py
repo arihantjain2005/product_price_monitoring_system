@@ -11,6 +11,7 @@ router = APIRouter(prefix="/products", tags=["products"])
 
 @router.get("", response_model=APIResponse[List[ProductResponse]])
 def get_products(
+    search: Optional[str] = None,
     category: Optional[str] = None,
     source: Optional[str] = None,
     min_price: Optional[float] = None,
@@ -22,6 +23,9 @@ def get_products(
 ):
     id_query = db.query(CanonicalProduct.id).outerjoin(CanonicalProduct.listings).outerjoin(SourceListing.price_history)
 
+    if search:
+        search_term = f"%{search}%"
+        id_query = id_query.filter((CanonicalProduct.name.ilike(search_term)) | (CanonicalProduct.brand.ilike(search_term)))
     if category:
         id_query = id_query.filter(CanonicalProduct.category == category)
     if source:
