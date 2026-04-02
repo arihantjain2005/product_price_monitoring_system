@@ -6,6 +6,23 @@ E-commerce businesses live or die by pricing intelligence. This system solves a 
 
 ---
 
+## Table of Contents
+- [📊 System Dashboard](#-system-dashboard)
+- [🛍️ Products Hub & Deduplication](#️-products-hub--deduplication)
+  - [📈 Intelligent Price History Graph](#-intelligent-price-history-graph)
+  - [🔔 Webhook Management Interface](#-webhook-management-interface)
+  - [⚡ Real-Time Alert Delivery](#-real-time-alert-delivery)
+  - [🌐 Global Real-Time Notifications](#-global-real-time-notifications)
+- [📁 Project Structure](#-project-structure)
+- [🚀 Getting Started: Step-by-Step Guide](#-getting-started-step-by-step-guide)
+- [🔌 API Documentation](#-api-documentation)
+- [🔔 Testing Webhook Notifications](#-testing-webhook-notifications)
+- [🧠 Architecture & Design Decisions](#-architecture--design-decisions)
+- [🛠 Tech Stack](#-tech-stack)
+- [🧪 Running Tests](#-running-tests)
+
+---
+
 ## 📊 System Dashboard
 ![Dashboard Preview](assets/dashboard-preview.png)
 
