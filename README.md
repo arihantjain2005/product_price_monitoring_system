@@ -20,6 +20,13 @@ E-commerce businesses live or die by pricing intelligence. This system solves a 
 
 ---
 
+### 📈 Intelligent Price History Graph
+![Price History Chart](assets/graph-preview.png)
+
+*Interactive tracking of price fluctuations across multiple marketplaces with intelligent auto-scaling axes and high-resolution timeline tracking.*
+
+---
+
 ### 🔔 Webhook Management Interface
 ![Webhook Management](assets/webhook-preview.png)
 
@@ -31,6 +38,13 @@ E-commerce businesses live or die by pricing intelligence. This system solves a 
 ![Notification Delivery](assets/webhook-notification.png)
 
 *Proof of the Outbox Pattern in action: The background dispatcher successfully broadcasting a live JSON payload to a subscribed endpoint the moment a price fluctuation is detected.*
+
+---
+
+### 🌐 Global Real-Time Notifications
+![Global Notifications](assets/notification-preview.png)
+
+*Instant, cross-view popup notifications powered by a decoupled background poller, alerting users to price changes exactly when they happen without requiring manual refreshes.*
 
 ---
 

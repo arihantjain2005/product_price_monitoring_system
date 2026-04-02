@@ -96,7 +96,20 @@
 }
 
 .listing-marketplace { color: var(--text-muted); }
-.listing-price { font-weight: 600; color: var(--success); }
+.listing-price {
+    font-weight: 600;
+    color: var(--success);
+    transition: color 0.3s ease;
+}
+
+/* Flashes green when a price updates in real-time during background polling */
+@keyframes priceFlash {
+    0%   { background: rgba(16, 185, 129, 0.35); border-radius: 4px; }
+    100% { background: transparent; }
+}
+.price-updated {
+    animation: priceFlash 1.2s ease-out forwards;
+}
 
 /* Pagination */
 .pagination-bar {

@@ -47,10 +47,17 @@ async def execute_refresh():
     finally:
         db.close()
 
-@router.post("", response_model=APIResponse[str], status_code=status.HTTP_202_ACCEPTED)
+from fastapi import Query
+
+@router.post("", response_model=APIResponse[str])
 async def trigger_refresh(
     background_tasks: BackgroundTasks,
+    wait: bool = Query(False),
     user=Depends(verify_api_key)
 ):
-    background_tasks.add_task(execute_refresh)
-    return APIResponse(success=True, data="Data refresh triggered in the background.")
+    if wait:
+        await execute_refresh()
+        return APIResponse(success=True, data="Data refresh completed successfully.")
+    else:
+        background_tasks.add_task(execute_refresh)
+        return APIResponse(success=True, data="Data refresh triggered in the background.")

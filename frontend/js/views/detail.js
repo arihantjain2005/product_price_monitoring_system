@@ -74,22 +74,37 @@ const DetailView = (() => {
             chartInstance = null;
         }
 
-        // Group history by marketplace for multi-line chart
+        // Helper — format a timestamp as "Apr 2, 5:34 PM" (date + time, no seconds)
+        function fmtLabel(ts) {
+            return new Date(ts).toLocaleString(undefined, {
+                month: 'short', day: 'numeric',
+                hour: 'numeric', minute: '2-digit'
+            });
+        }
+
+        // Group history by marketplace, keep raw timestamp for sorting
         const marketplaces = [...new Set(history.map(h => h.marketplace))];
         const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6'];
 
         const datasets = marketplaces.map((market, i) => {
             const points = history
                 .filter(h => h.marketplace === market)
-                .map(h => ({ x: new Date(h.timestamp).toLocaleDateString(), y: h.price }));
+                // Sort chronologically so the line draws left → right
+                .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
+                .map(h => ({
+                    x: fmtLabel(h.timestamp),   // "Apr 2, 5:34 PM"
+                    y: h.price,
+                    rawTs: h.timestamp          // keep for tooltip
+                }));
             return {
                 label: market,
                 data: points,
                 borderColor: colors[i % colors.length],
                 backgroundColor: colors[i % colors.length] + '22',
                 borderWidth: 2,
-                pointRadius: 4,
-                tension: 0.35,
+                pointRadius: 5,
+                pointHoverRadius: 7,
+                tension: 0.3,
                 fill: true
             };
         });
@@ -107,16 +122,29 @@ const DetailView = (() => {
                     },
                     tooltip: {
                         callbacks: {
-                            label: ctx => ` $${ctx.parsed.y.toLocaleString()}`
+                            // Title row: show the datetime label
+                            title: ctx => ctx[0]?.label ?? '',
+                            // Value row: show formatted price
+                            label: ctx => {
+                                const price = `$${ctx.parsed.y.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                                return `  ${ctx.dataset.label}: ${price}`;
+                            }
                         }
                     }
                 },
                 scales: {
                     x: {
-                        ticks: { color: '#64748b' },
-                        grid:  { color: 'rgba(255,255,255,0.04)' }
+                        ticks: {
+                            color: '#64748b',
+                            maxRotation: 35,
+                            autoSkip: true,
+                            maxTicksLimit: 10
+                        },
+                        grid: { color: 'rgba(255,255,255,0.04)' }
                     },
                     y: {
+                        beginAtZero: false,  // scale to actual data range
+                        grace: '10%',        // 10% padding above & below
                         ticks: {
                             color: '#64748b',
                             callback: val => `$${val.toLocaleString()}`

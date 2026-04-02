@@ -8,6 +8,15 @@ const Router = (() => {
     const pageTitle    = document.getElementById('page-title');
     const pageSubtitle = document.getElementById('page-subtitle');
 
+    // Map view keys to their view module objects
+    const viewModules = {
+        dashboard: () => DashboardView,
+        products:  () => ProductsView,
+        webhooks:  () => typeof WebhooksView !== 'undefined' ? WebhooksView : null
+    };
+
+    let currentViewKey = null;
+
     const routes = {
         dashboard: {
             title:    'Dashboard Overview',
@@ -30,6 +39,13 @@ const Router = (() => {
         const route = routes[viewKey];
         if (!route) return;
 
+        // Destroy the outgoing view's polling timer before switching
+        if (currentViewKey && currentViewKey !== viewKey) {
+            const mod = viewModules[currentViewKey]?.();
+            if (mod && typeof mod.destroy === 'function') mod.destroy();
+        }
+        currentViewKey = viewKey;
+
         pageTitle.textContent    = route.title;
         pageSubtitle.textContent = route.subtitle;
 
@@ -40,6 +56,8 @@ const Router = (() => {
         dynamicView.innerHTML = Components.loader();
         route.render(dynamicView);
     }
+
+    function getCurrentView() { return currentViewKey; }
 
     function navigateToDetail(productId) {
         pageTitle.textContent    = 'Product Detail';
@@ -58,5 +76,15 @@ const Router = (() => {
         });
     }
 
-    return { init, navigate, navigateToDetail };
+    function syncActiveView() {
+        if (!currentViewKey) return;
+        const mod = viewModules[currentViewKey]?.();
+        if (mod && typeof mod.sync === 'function') {
+            mod.sync();
+        } else {
+            navigate(currentViewKey);
+        }
+    }
+
+    return { init, navigate, navigateToDetail, getCurrentView, syncActiveView };
 })();

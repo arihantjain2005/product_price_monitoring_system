@@ -37,9 +37,10 @@ const Api = (() => {
         getProducts:     (params = '') => request('GET',  `/products${params}`),
         getProduct:      (id)         => request('GET',  `/products/${id}`),
         getHistory:      (id)         => request('GET',  `/products/${id}/history`),
-        triggerRefresh:  ()           => request('POST', '/refresh'),
+        triggerRefresh:  ()           => request('POST', '/refresh?wait=true'),
         getWebhooks:     ()           => request('GET',  '/webhooks'),
         registerWebhook: (url)        => request('POST', '/webhooks', { target_url: url }),
-        deleteWebhook:   (id)         => request('DELETE', `/webhooks/${id}`)
+        deleteWebhook:   (id)         => request('DELETE', `/webhooks/${id}`),
+        getRecentChanges:(afterId)    => request('GET',  `/analytics/recent-changes?after_id=${afterId}`)
     };
 })();

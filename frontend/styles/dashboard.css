@@ -68,3 +68,12 @@
     from { opacity: 0; transform: translateY(16px); }
     to   { opacity: 1; transform: translateY(0); }
 }
+
+/* Flashes the number when a Dashboard stat updates during background polling */
+@keyframes statFlash {
+    0%   { color: var(--brand); transform: scale(1.06); }
+    100% { color: var(--text-primary); transform: scale(1); }
+}
+.stat-updated {
+    animation: statFlash 0.8s ease-out forwards;
+}

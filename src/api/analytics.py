@@ -40,3 +40,41 @@ def get_analytics(
     }
 
     return APIResponse(success=True, data=data)
+
+from typing import Optional
+from sqlalchemy.orm import joinedload
+from fastapi import Query
+
+@router.get("/recent-changes", response_model=APIResponse[list[dict]])
+def get_recent_changes(
+    after_id: int = Query(0, description="Get changes after this PriceHistory ID"),
+    db: Session = Depends(get_db),
+    user=Depends(verify_api_key)
+):
+    query = db.query(PriceHistory).options(
+        joinedload(PriceHistory.listing).joinedload(SourceListing.canonical_product)
+    ).order_by(PriceHistory.id.desc())
+
+    if after_id == 0:
+        # Just return the very last ID so frontend can initialize its cursor
+        latest = query.first()
+        return APIResponse(success=True, data=[{
+             "history_id": latest.id if latest else 0,
+             "brand": "", "name": "", "marketplace": "", "new_price": 0
+        }] if latest else [])
+    
+    changes = query.filter(PriceHistory.id > after_id).limit(20).all()
+    
+    results = []
+    for c in changes:
+        # Reverse to chronological since we queried descending
+        p = c.listing.canonical_product
+        results.insert(0, {
+            "history_id": c.id,
+            "brand": p.brand,
+            "name": p.name,
+            "marketplace": c.listing.marketplace_name,
+            "new_price": c.price
+        })
+
+    return APIResponse(success=True, data=results)

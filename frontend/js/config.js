@@ -6,6 +6,6 @@
 const CONFIG = Object.freeze({
     API_BASE_URL: 'http://127.0.0.1:8000',
     API_KEY: 'entrupy-intern-test-key-2026',
-    REFRESH_INTERVAL_MS: 30000,
-    REQUEST_TIMEOUT_MS: 10000
+    REFRESH_INTERVAL_MS: 10000,   // poll every 10 s for near-real-time updates
+    REQUEST_TIMEOUT_MS: 30000     // 30 s — allows synchronous refresh to complete
 });

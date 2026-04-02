@@ -7,8 +7,14 @@ const ProductsView = (() => {
     let debounceTimer = null;
     let currentPage = 0;
     const PAGE_SIZE = 12;
+    let _pollTimer = null;
+    let _isRendered = false; // true once the grid skeleton is in the DOM
 
     async function render(container) {
+        destroy(); // clear any previous timer before re-rendering
+        _isRendered = false;
+        currentPage = 0;
+
         container.innerHTML = `
             <div class="filter-bar">
                 <input type="text"   id="filter-search"  placeholder="🔍  Search products..." autocomplete="off">
@@ -37,31 +43,44 @@ const ProductsView = (() => {
 
         const debouncedLoad = () => {
             clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(() => { currentPage = 0; _load(); }, 350);
+            debounceTimer = setTimeout(() => { currentPage = 0; _load(false); }, 350);
         };
 
         document.getElementById('filter-search').addEventListener('keyup', debouncedLoad);
-        document.getElementById('filter-category').addEventListener('change', () => { currentPage = 0; _load(); });
-        document.getElementById('filter-source').addEventListener('change', () => { currentPage = 0; _load(); });
-        document.getElementById('filter-min-price').addEventListener('change', () => { currentPage = 0; _load(); });
-        document.getElementById('filter-max-price').addEventListener('change', () => { currentPage = 0; _load(); });
+        document.getElementById('filter-category').addEventListener('change', () => { currentPage = 0; _load(false); });
+        document.getElementById('filter-source').addEventListener('change', () => { currentPage = 0; _load(false); });
+        document.getElementById('filter-min-price').addEventListener('change', () => { currentPage = 0; _load(false); });
+        document.getElementById('filter-max-price').addEventListener('change', () => { currentPage = 0; _load(false); });
 
         document.getElementById('btn-prev').addEventListener('click', () => {
-            if (currentPage > 0) { currentPage--; _load(); }
+            if (currentPage > 0) { currentPage--; _load(false); }
         });
         document.getElementById('btn-next').addEventListener('click', () => {
             currentPage++;
-            _load();
+            _load(false);
         });
 
-        await _load();
+        // Initial load — show spinner
+        await _load(false);
+        _isRendered = true;
+
+        // Poll silently every REFRESH_INTERVAL_MS — NO spinner, patch prices in-place
+        _pollTimer = setInterval(() => _load(true), CONFIG.REFRESH_INTERVAL_MS);
     }
 
-    async function _load() {
+    /**
+     * _load(silent)
+     *   silent=false → shows loader spinner, full re-render (user-initiated)
+     *   silent=true  → no spinner, patches card prices in-place (background poll)
+     */
+    async function _load(silent = false) {
         const grid = document.getElementById('products-grid');
         if (!grid) return;
 
-        grid.innerHTML = Components.loader();
+        // Only show spinner on explicit user-triggered loads
+        if (!silent) {
+            grid.innerHTML = Components.loader();
+        }
 
         const search   = document.getElementById('filter-search')?.value.trim();
         const category = document.getElementById('filter-category')?.value;
@@ -87,33 +106,87 @@ const ProductsView = (() => {
             const btnNext       = document.getElementById('btn-next');
 
             if (!data || data.length === 0) {
-                grid.innerHTML = Components.emptyState('No products match your filters. Try a broader search.');
-                if (currentPage === 0 && paginationBar) paginationBar.style.display = 'none';
+                if (!silent) {
+                    grid.innerHTML = Components.emptyState('No products match your filters. Try a broader search.');
+                    if (currentPage === 0 && paginationBar) paginationBar.style.display = 'none';
+                }
                 return;
             }
 
-            grid.innerHTML = data.map(p => Components.productCard(p)).join('');
+            if (silent) {
+                // ── Silent poll: patch prices in-place, no full re-render ──
+                _patchPricesInPlace(grid, data);
+            } else {
+                // ── User-triggered: full re-render ──
+                grid.innerHTML = data.map(p => Components.productCard(p)).join('');
 
-            if (paginationBar) {
-                paginationBar.style.display = 'flex';
-                if (pageInfo) pageInfo.textContent = `Page ${currentPage + 1}`;
-                if (btnPrev)  btnPrev.disabled = currentPage === 0;
-                if (btnNext)  btnNext.disabled = data.length < PAGE_SIZE;
+                if (paginationBar) {
+                    paginationBar.style.display = 'flex';
+                    if (pageInfo) pageInfo.textContent = `Page ${currentPage + 1}`;
+                    if (btnPrev)  btnPrev.disabled = currentPage === 0;
+                    if (btnNext)  btnNext.disabled = data.length < PAGE_SIZE;
+                }
+
+                grid.querySelectorAll('.product-card').forEach(card => {
+                    card.addEventListener('click', () => {
+                        const id = card.dataset.productId;
+                        Router.navigateToDetail(id);
+                    });
+                });
             }
 
-            grid.querySelectorAll('.product-card').forEach(card => {
-                card.addEventListener('click', () => {
-                    const id = card.dataset.productId;
-                    Router.navigateToDetail(id);
-                });
-            });
-
         } catch (err) {
-            grid.innerHTML = Components.emptyState('Could not load products. Is the API running?');
-            Components.toast(`Products load failed: ${err.message}`, 'error');
+            if (!silent) {
+                grid.innerHTML = Components.emptyState('Could not load products. Is the API running?');
+                Components.toast(`Products load failed: ${err.message}`, 'error');
+            }
         }
     }
 
-    return { render };
+    /**
+     * Patch only the price values inside existing product cards.
+     * Finds each card by data-product-id, then updates each listing's price span.
+     * Flashes a highlight animation when a price actually changed.
+     */
+    function _patchPricesInPlace(grid, products) {
+        products.forEach(product => {
+            const card = grid.querySelector(`.product-card[data-product-id="${product.id}"]`);
+            if (!card) return; // card not in DOM (different page) — skip
+
+            // Get all listing rows in this card
+            const listingRows = card.querySelectorAll('.listing-row');
+
+            product.listings.forEach((listing, index) => {
+                const row = listingRows[index];
+                if (!row) return;
+
+                const priceEl = row.querySelector('.listing-price');
+                if (!priceEl) return;
+
+                const newPrice = listing.current_price != null
+                    ? `$${listing.current_price.toLocaleString()}`
+                    : 'N/A';
+
+                if (priceEl.textContent !== newPrice) {
+                    // Price changed — update and flash
+                    priceEl.textContent = newPrice;
+                    priceEl.classList.remove('price-updated');
+                    // Force reflow so animation restarts
+                    void priceEl.offsetWidth;
+                    priceEl.classList.add('price-updated');
+                }
+            });
+        });
+    }
+
+    function destroy() {
+        if (_pollTimer !== null) {
+            clearInterval(_pollTimer);
+            _pollTimer = null;
+        }
+        _isRendered = false;
+    }
+
+    return { render, destroy, sync: () => _load(true) };
 })();
 
