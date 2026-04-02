@@ -380,9 +380,27 @@ Right now, `LocalFileScraper` handles multiple local files gracefully. To extend
 
 ## 🧪 Running Tests
 
+To run the tests successfully, you must ensure your virtual environment is active so that Python can find the required dependencies (like `pytest` and `sqlalchemy`). 
+
+**Step 1. Open your terminal at the root directory of the project:**
 ```bash
-pytest
+cd product_price_monitoring_system
 ```
+
+**Step 2. Activate the virtual environment & install requirements:**
+```bash
+# Windows
+.\venv\Scripts\activate
+
+# Install requirements (if you haven't already)
+pip install -r requirements.txt
+```
+
+**Step 3. Run the tests:**
+```bash
+python -m pytest
+```
+
 *( Integration tests covering idempotency, authentication, and price detection are implemented in the `tests/` directory. )*
 
 **The 8 Sample Test Cases implemented:**
